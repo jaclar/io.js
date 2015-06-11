@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <string>
 #include <errno.h>
 #include <limits.h>
 
@@ -516,6 +517,33 @@ static void Stat(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(
         BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr)));
   }
+}
+
+static void Hello(const FunctionCallbackInfo<Value>& args) {
+  Environment* env = Environment::GetCurrent(args);
+
+  if (args.Length() < 1)
+    return TYPE_ERROR("hello required");
+  if (!args[0]->IsString())
+    return TYPE_ERROR("hello must be a string");
+
+  // std::string result = "Hallo" + args[0]->ToString();
+  //node::Utf8Value path(env->isolate(), args[0]);
+
+  Handle<String> hello(String::NewFromUtf8(env->isolate(), "Hello "));
+  Handle<String> ret(String::Concat(hello, args[0]->ToString()));
+  // v8::Isolate* isolate = args.GetIsolate();
+  
+  if (args[1]->IsObject()) { // callback
+  
+      Local<Function> cb = Local<Function>::Cast(args[1]);
+      const unsigned argc = 2;
+      Local<Value> argv[argc] = { Null(env->isolate()), ret };
+      cb->Call( Null(env->isolate()), argc, argv);
+  } else { // sync
+      args.GetReturnValue().Set(ret);
+  }
+
 }
 
 static void LStat(const FunctionCallbackInfo<Value>& args) {
@@ -1196,6 +1224,7 @@ void InitFs(Handle<Object> target,
   target->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "FSInitialize"),
               env->NewFunctionTemplate(FSInitialize)->GetFunction());
 
+  env->SetMethod(target, "hello", Hello);
   env->SetMethod(target, "access", Access);
   env->SetMethod(target, "close", Close);
   env->SetMethod(target, "open", Open);
